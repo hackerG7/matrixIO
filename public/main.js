@@ -101,7 +101,7 @@ frameRate(60)
 				color: "black",
 				padding: "16px 16px",
 				"text-align": "Center",
-				"font-size": "20px",
+				"font-size": "20px", 
 				margin: "2px 2px",
 				opacity: "0.6",
 				transition: "0.3s",
