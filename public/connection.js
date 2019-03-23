@@ -199,6 +199,11 @@ function DataHandle(data){
                 break;
                 case 1://circle
                     b.radius = data.circleRadius;
+                    if(data.color==undefined){
+                        b.color = [255,255,255]
+                    }else{
+                        b.color = data.color
+                    }
                 break;
                 case 2://rectangle
                     b.width = data.width;

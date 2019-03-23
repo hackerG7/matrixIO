@@ -71,6 +71,7 @@ function update_body(b,roomID = undefined){
         break;
         case "Circle Body":
             package.circleRadius = b.circleRadius
+            package.color = b.color
             package.label = 1
         break;
         case "Rectangle Body":
@@ -219,18 +220,14 @@ class Room{
                     var m = B.matrix_master;
                     if(m!=undefined){
                         sendMsgToRoom(A.master_room.roomID,7,{uid:A.uid})
-                        candyList.remove(A)
-                        A.master_room.remove_body(A)
-                        m.get_candy();
+                        m.get_candy(A);
                     }
                 }
                 if(B.is_candy &&A.can_fight){
                     var m = A.matrix_master;
                     if(m!=undefined){
                         sendMsgToRoom(B.master_room.roomID,7,{uid:B.uid})
-                        candyList.remove(B)
-                        B.master_room.remove_body(B)
-                        m.get_candy();
+                        m.get_candy(B);
                     }
                 }
 
@@ -253,8 +250,31 @@ class Room{
         this.create_candy(20,20)
         roomList.push(this)
     }
-    create_candy(x,y){
+    create_candy(x,y,type=0){
         var body = Bodies.circle(x,y,3,{mass:0.001,restitution:0});
+        body.abilities = [];
+        body.color = [255,255,255]
+        body.candyType = type;
+        switch(type){
+            case 0://normal candy
+                body.color = [10,255,20]
+            break;
+            case 1:
+                body.color = [0,200,255]
+                body.abilities = [function(p){
+                    p.add_effect(function(p){
+                        p.set_speed += 0.3
+                    },80*timeOut)
+                }];
+            break;
+            case 2:
+                body.color = [255,255,0]
+                body.abilities = [function(p){
+                    p.cooldown[0] += p.set_cooldown[0]/5
+
+                }];
+            break;
+        }
         body.is_candy = true;
         this.add_body(body)
         candyList.push(body);
@@ -283,7 +303,8 @@ class Room{
     update(){
         Engine.update(this.engine,1000/60)
         if(Math.random()>0.8 && candyList.length <scene_width/10){
-            this.create_candy(irandom(scene_width),irandom(scene_height));
+            var t = irandom(2);
+            this.create_candy(irandom(scene_width),irandom(scene_height),t);
         }
     }
 }
@@ -323,10 +344,17 @@ class Weapon{
             }
         }
     }
-    get_candy(){
-        if(irandom(10)<8){
-            var r = this.master.add_matrix(this.body.position.x,this.body.position.y,this.master.set_life,this.master.set_damage)
+    get_candy(body){
+        if(body.candyType==0){
+            if(irandom(10)<8){
+                var r = this.master.add_matrix(this.body.position.x,this.body.position.y,this.master.set_life,this.master.set_damage)
+            }
         }
+        for(var f of body.abilities){
+            f(this.master)
+        }
+        candyList.remove(body)
+        body.master_room.remove_body(body)
         this.master.power+=70;
     }
     
@@ -365,10 +393,20 @@ class Matrix{
             }
         }
     }
-    get_candy(){
-        if(Math.random()<this.absorb){
-            var r = this.master.add_matrix(this.body.position.x,this.body.position.y,this.master.set_life,this.master.set_damage)
+    get_candy(body){
+        
+        if(body.candyType==0){//green
+            if(Math.random()<this.absorb){
+                var r = this.master.add_matrix(this.body.position.x,this.body.position.y,this.master.set_life,this.master.set_damage)
+            }
+        }else{
+            console.log(body.candyType)
         }
+        for(var f of body.abilities){
+            f(this.master)
+        }
+        candyList.remove(body)
+        body.master_room.remove_body(body)
         this.master.power+=70;
     }
     remove(){
@@ -401,6 +439,7 @@ class Player{
         this.previous_abilityLevel = [0,0,0,0,0]
         this.abilityLevel = [0,0,0,0,0]
         this.abilityVar = [0,0,0,0,0,0,0,0,0]
+        this.effectList = [];
         //this.abilityLevel[0] = atkDamage
         this.set_damage = 1
         //this.abilityLevel[1] = health
@@ -464,13 +503,13 @@ class Player{
     attack(faceDir,distance){
         switch(this.role){
             case 0://shooter
-                for(var i = 0 ; i < this.set_damage ; i++){
+                for(var i = 0 ; i < this.set_life-1 ; i++){
                     setTimeout(function(p,faceDir){
                         p.remove_matrix(0)
                         var xx = lengthdir_x(faceDir,20)+p.x
                         var yy = lengthdir_y(faceDir,20)+p.y
-                        var m = p.add_matrix(xx,yy,p.set_life,p.set_damage*2,1,false);
-                        m.add_force(faceDir,4)
+                        var m = p.add_matrix(xx,yy,p.set_life,p.set_damage,1,false);
+                        m.add_force(faceDir,3)
                     },i*100,this,faceDir)
                 }
             break;
@@ -491,7 +530,7 @@ class Player{
                     var m = this.add_matrix(xx,yy,this.set_life*2,this.set_damage/2,0,true);
                     m.body.mass = 10;
                     m.body.restitution = 0.8;
-                    m.add_force(faceDir,1.8*distance/1000)
+                    m.add_force(faceDir,0.01*distance/this.zoom)
                     setTimeout(function(m){
                         var master = m.master
                         var xx = m.body.position.x;
@@ -506,7 +545,7 @@ class Player{
                             newM.add_force(360/interval*i+m.body.angle,2)
                             setTimeout(function(m){
                                 m.remove()
-                            },200+master.abilityLevel[0]*40,newM)
+                            },Math.min(100+master.abilityLevel[0]*40,500),newM)
                         }
                         
                         m.remove();
@@ -517,8 +556,8 @@ class Player{
             case 3://smasher    
                 for(var m of this.matrix_array){
                     m.add_force(faceDir,0.1+1*this.set_damage)
-                    m.life = this.set_damage+1
-                    m.damage = this.set_damage+1
+                    m.life = this.set_life*2
+                    m.damage = this.set_life*2
                     
                     setTimeout(function(m,p,color){
                         m.life = p.set_life;
@@ -542,9 +581,9 @@ class Player{
                         var xx = lengthdir_x(faceDir-90*left, 10)+p.x;
                         var yy = lengthdir_y(faceDir-90*left, 10)+p.y;
                         var m = p.add_matrix(xx,yy,p.set_life,p.set_damage);
-                        m.add_force(faceDir-45*left,0.002*distance)
+                        m.add_force(faceDir-45*left,0.03*distance/p.zoom)
                         setTimeout(function(m,faceDir,left){
-                            m.add_force(faceDir,0.005*distance)
+                            m.add_force(faceDir,0.01*distance/p.zoom)
                             setTimeout(function(m,faceDir, left){
                                 m.add_force(faceDir+45*left,1)
                                 setTimeout(function(m,faceDir, left){
@@ -683,11 +722,11 @@ class Player{
         }
         */
         //this.remove_matrix(0)
-        this.set_damage = 1+this.abilityLevel[0]/3
-        this.set_life = 2+this.abilityLevel[1]/3
+        this.set_damage = 1//1+this.abilityLevel[0]/3
+        this.set_life = 2+this.abilityLevel[0]/3
         this.max_matrix = this.abilityLevel[1]+5
         this.set_speed = 1+(this.abilityLevel[2]/5)
-        this.zoom = 60/((this.matrix_array.length/30+10)+this.abilityLevel[3])
+        this.zoom = 100/((this.matrix_array.length/30+10)+this.abilityLevel[3])
         this.cooldownReduction = this.abilityLevel[4]
 
         if(this.role!=-1){
@@ -738,6 +777,19 @@ class Player{
         })
         this.previous_abilityLevel = this.abilityLevel
         this.previous_level = this.level
+        this.do_effect();
+
+    }
+    add_effect(effectAction,time){
+        this.effectList.push(effectAction)
+        setTimeout(function(p,e){
+            p.effectList.remove(e);
+        }, time,this, effectAction);
+    }
+    do_effect(){
+        for(var f of this.effectList){
+            f(this);
+        }
     }
     remove(){
         while(this.matrix_array.length>0){//after removed the i will too large, need to re-run using while
@@ -884,7 +936,13 @@ function newConnection(socket){
                     var abilityID = data.abilityID;
                     if(p.get_ability_points()<p.level/*&& ability is not maxed*/){
                         p.abilityLevel[abilityID]++
+                        if(abilityID==0){//attack
+                            for(var m of p.matrix_array){
+                                m.body.life = p.set_damage
+                            }
+                        }
                     }
+
                 break;
                 case 11://evolution
                     var selectedID = data.selectedID;
@@ -952,7 +1010,7 @@ var roleDataList=[
 ]
 var evolutionDataList = [
     {
-        requiredLevel:5,
+        requiredLevel:2,
         selectTypes:[2,3,4]
     },
     {

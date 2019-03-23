@@ -35,7 +35,11 @@ function update_bodies(){
                 case 1://circle
                     ellipseMode(CENTER)
                     noFill()
-                    stroke(255)
+                    if(b.color!=undefined){
+                        stroke(b.color)
+                    }else{
+                        stroke()
+                    }
                     ellipse(0,0,b.radius*2,b.radius*2)
                 break;
                 case 2://rectangle
