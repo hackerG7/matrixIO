@@ -18,6 +18,7 @@
     "brightness": "^3.0.0",
     "express": "^4.16.3",
     "flood-protection": "^1.0.1",
+    "fps-run-js": "^1.0.6",
     "johnny-five": "^1.0.0",
     "matter": "^0.2.0",
     "matter-js": "^0.14.2",
@@ -29,5 +30,13 @@
     "system-control": "0.0.5",
     "tessel-io": "^1.2.0"
   },
-  "devDependencies": {}
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hackerG7/matrixIO.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hackerG7/matrixIO/issues"
+  },
+  "homepage": "https://github.com/hackerG7/matrixIO#readme"
 }

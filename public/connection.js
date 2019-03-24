@@ -6,14 +6,16 @@ let playerData = {
     abilityLevel:[0,0,0,0,0],
     levelup_percent:0,
     cooldown_percent:0,
-    role:-1
+    role:-1,
+    previous_direction:0,
+    previous_speed:0
 }
 function draw_background(){
     let rr = 100
 	stroke(255,255,255,255)
 	fill(255,255,255,255)
-	for(var i = 0 ; i < value.scene_width; i +=rr){
-		for(var j = 0 ; j < value.scene_height ; j+=rr){
+	for(var i = 0 ; i < value.scene_width+1; i +=rr){
+		for(var j = 0 ; j < value.scene_height+1 ; j+=rr){
 			line(i,0,i,value.scene_height)
 			line(0,j,value.scene_width,j)
 		}

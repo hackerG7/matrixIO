@@ -15,6 +15,7 @@ include("D:/DeskTopD/Code World/JavascriptProject/ioGame/setup.js")
 var Matter = require("matter-js");
 matter_script(Matter)
 var FloodProtection = require("flood-protection")
+var FpsRun = require("fps-run-js")
 console.log(FloodProtection)
 const floodProtection = new FloodProtection.default({
     rate:1000,
@@ -46,9 +47,9 @@ function sendMsgToRoom(roomID, msgName, data){
     io.to(roomID).emit("Data",data)
 }//sendMsgToAll("update",{date:"12/13/15"})
 let startedPeriod = 0;
-let server_fps = 64;
-let timeOut = 1000/server_fps
-
+let frameRate = 30
+let timeOut = 1000/frameRate
+let deltaTime = 60/frameRate
 function get_player(id){
     return playerList.find(x => x.socketID===id);
 }
@@ -105,6 +106,8 @@ function update_fps(){
     setTimeout(update_fps,1000)
 }
 setTimeout(update_fps,1000)
+var fr = new FpsRun();
+fr.start(loop,frameRate)
 function loop(){
     tick++
     startedPeriod++;
@@ -159,9 +162,9 @@ function loop(){
     ///
     
 
-    setTimeout(loop, timeOut);
+    //setTimeout(loop, timeOut);
 }
-setTimeout(loop, timeOut);
+//setTimeout(loop, timeOut);
 
 
 io.sockets.on('connection',newConnection);
@@ -362,7 +365,7 @@ class Weapon{
         var b = this.body;
         var bX = b.position.x;
         var bY = b.position.y;
-        var spd = force*b.mass/100;
+        var spd = force*b.mass/100*deltaTime;
         var lX = lengthdir_x(dir,spd)
         var lY = lengthdir_y(dir,spd)
         Body.applyForce(b,{x:bX,y:bY},{x:lX,y:lY})
@@ -428,7 +431,7 @@ class Matrix{
         var b = this.body;
         var bX = b.position.x;
         var bY = b.position.y;
-        var spd = force*b.mass/100;
+        var spd = force*b.mass/100*deltaTime;
         var lX = lengthdir_x(dir,spd)
         var lY = lengthdir_y(dir,spd)
         Body.applyForce(b,{x:bX,y:bY},{x:lX,y:lY})
@@ -509,7 +512,7 @@ class Player{
                         var xx = lengthdir_x(faceDir,20)+p.x
                         var yy = lengthdir_y(faceDir,20)+p.y
                         var m = p.add_matrix(xx,yy,p.set_life,p.set_damage,1,false);
-                        m.add_force(faceDir,3)
+                        m.add_force(faceDir,2)
                     },i*100,this,faceDir)
                 }
             break;
@@ -530,7 +533,7 @@ class Player{
                     var m = this.add_matrix(xx,yy,this.set_life*2,this.set_damage/2,0,true);
                     m.body.mass = 10;
                     m.body.restitution = 0.8;
-                    m.add_force(faceDir,0.01*distance/this.zoom)
+                    m.add_force(faceDir,0.005*distance/this.zoom)
                     setTimeout(function(m){
                         var master = m.master
                         var xx = m.body.position.x;
@@ -545,7 +548,7 @@ class Player{
                             newM.add_force(360/interval*i+m.body.angle,2)
                             setTimeout(function(m){
                                 m.remove()
-                            },Math.min(100+master.abilityLevel[0]*40,500),newM)
+                            },Math.min(100+master.abilityLevel[0]*20,500),newM)
                         }
                         
                         m.remove();
@@ -581,13 +584,13 @@ class Player{
                         var xx = lengthdir_x(faceDir-90*left, 10)+p.x;
                         var yy = lengthdir_y(faceDir-90*left, 10)+p.y;
                         var m = p.add_matrix(xx,yy,p.set_life,p.set_damage);
-                        m.add_force(faceDir-45*left,0.03*distance/p.zoom)
+                        m.add_force(faceDir-45*left,0.01*distance/p.zoom)
                         setTimeout(function(m,faceDir,left){
                             m.add_force(faceDir,0.01*distance/p.zoom)
                             setTimeout(function(m,faceDir, left){
-                                m.add_force(faceDir+45*left,1)
+                                m.add_force(faceDir+45*left,0.5)
                                 setTimeout(function(m,faceDir, left){
-                                    m.add_force(faceDir+90*left,0.8)
+                                    m.add_force(faceDir+90*left,0.3)
                                 },50,m,faceDir,left)
                             },50,m,faceDir,left)
                         },50,m,faceDir, left)
@@ -725,7 +728,7 @@ class Player{
         this.set_damage = 1//1+this.abilityLevel[0]/3
         this.set_life = 2+this.abilityLevel[0]/3
         this.max_matrix = this.abilityLevel[1]+5
-        this.set_speed = 1+(this.abilityLevel[2]/5)
+        this.set_speed = 1+(this.abilityLevel[2]/4)
         this.zoom = 100/((this.matrix_array.length/30+10)+this.abilityLevel[3])
         this.cooldownReduction = this.abilityLevel[4]
 
@@ -908,8 +911,12 @@ function newConnection(socket){
                 case 9://player_move
                     d = data.direction;
                     p.direction = d;
-                    p.speed = Math.max(p.set_speed/(1+(700+p.power/70))*700,0)+0.1;
-                    
+                    p.speed = (Math.max(p.set_speed/(1+(700+p.level*120))*700,0)+0.1)*deltaTime;
+                    sendMsgToRoom(p.roomID,9,{
+                        id:socket.id,
+                        direction:p.direction,
+                        speed:p.speed
+                    })
                 break;
                 case 8://speed
                     p.speed = 0;

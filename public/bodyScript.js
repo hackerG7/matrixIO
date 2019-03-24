@@ -52,10 +52,11 @@ function update_bodies(){
             rotate(0)
             pop();
                 
-            var s = 0.5
+            var s = 0.1
+            var spdTime = 3
             b.realAngle = approach(b.realAngle,b.angle)
-            b.realX = approach(b.realX,b.x,s)
-            b.realY = approach(b.realY,b.y,s)
+            b.realX = approach(b.realX,b.x,spdTime,s)
+            b.realY = approach(b.realY,b.y,spdTime,s)
         }else{
             bodyList.remove(b)
         }

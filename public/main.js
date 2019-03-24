@@ -14,11 +14,11 @@ var value = {
 	vision_height:768*2,
 	realZoom:1,
 	zoom:1,
-	abilityTags:["attackDMG","health","speed","vision","coolDown"],
+	abilityTags:["攻擊力","生命值","速度","視野","冷卻"],
 	evolutionDataList:[],
 	evoluted:false,
 	current_evolution:undefined,
-	roles:["shooter","tank","bomber","smasher","iluminaty"]
+	roles:["射手","坦克","炸彈人","狂牛","赫子"]
 }
 var show_ability_levelup = false;
 var show_ability_levelup_alpha = 0;
@@ -320,12 +320,15 @@ function player_control(){
 		let hspeed = right-left;
 		let vspeed = down-up;
 		let d = point_direction(0,0,hspeed,vspeed)
+		
+		sendMsg(9,{direction:d})
 
-		if(hspeed!=false || vspeed!=false){
-			sendMsg(9,{direction:d})
-		}
+		playerData.previous_direction = d;
+		playerData.previous_speed = 1
 	}else{
 		sendMsg(8)
+		
+		playerData.previous_speed = 0
 	}
 }
 /*
