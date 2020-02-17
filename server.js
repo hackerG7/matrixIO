@@ -23,14 +23,14 @@ const floodProtection = new FloodProtection.default({
 })
 var tick = 0;
 var express = require("express");
-var value_port = 80;
+var value_port = 569;
 var app = express();
 var server = app.listen(value_port);
 let scene_width = 500;
 let scene_height = 500;
 
-var vision_width = 2600
-var vision_height = 768*2
+var vision_width = 500
+var vision_height = 500
 var candyList = [];
 var normal_matrix_color = [0,255,0]
 app.use(express.static("public"));
@@ -85,20 +85,20 @@ function update_body(b,roomID = undefined){
     }
     if(roomID==undefined){
         roomID = b.master_room.roomID
-    }/*
+    }
     if(rm!=undefined){
         var pL = rm.playerList;
         if(pL!=undefined){
             for(var pID of pL){
                 var p = get_player(pID)
                 var dis = point_distance(p.x,p.y,b.position.x,b.position.y);
-                if(dis<vision_width){
+                if(dis<vision_width/p.zoom*10){
                     p.sendMsg(6,package)
                 }
             }
         }
-    }*/
-    sendMsgToRoom(roomID,6,package)
+    }
+    //sendMsgToRoom(roomID,6,package)
 }
 function update_fps(){
     console.log(tick)
@@ -195,26 +195,9 @@ class Room{
                         if(mA.master!=mB.master){
                             var pA = mA.master;
                             var pB = mB.master;
-                            pA.lastFighter = pB;
-                            pB.lastFighter = pA;
-                            var rr = 5
-                            mA.life -= mB.damage+B.speed*rr;
-                            mB.life -= mA.damage+A.speed*rr;
-                            if(mA.life<=0){
-                                if(pA.matrix_array.length<=1){//<=1 because it is not removed yet,
-                                    pB.give_killReward(pA)
-                                    pA.die()
-                                }
-                                mA.remove();// it removed after it calculate
-                            }
-                            if(mB.life<=0){
-                                
-                                if(pB.matrix_array.length<=1){
-                                    pA.give_killReward(pB)
-                                    pB.die()
-                                }
-                                mB.remove();
-                            }
+                            mA.attack(mB)
+                            mB.attack(mA)
+                            
                         }
                     }
                 }
@@ -305,7 +288,7 @@ class Room{
     }
     update(){
         Engine.update(this.engine,1000/60)
-        if(Math.random()>0.8 && candyList.length <scene_width/10){
+        if(Math.random()>0.8 && candyList.length <scene_width/5){
             var t = irandom(2);
             this.create_candy(irandom(scene_width),irandom(scene_height),t);
         }
@@ -382,6 +365,7 @@ class Matrix{
         this.color = normal_matrix_color;
         this.is_extra = is_extra;
         this.absorb = 0.5;
+        this.abilities = [];
         if(this.master!=undefined){
             if(this.master.roomID!=-1 && this.master.room!=undefined){
                 this.body = Bodies.circle(this.x,this.y,5);
@@ -394,6 +378,26 @@ class Matrix{
                 this.master.matrix_array.push(this)
                 //console.log("created "+this.master.matrix_array.length)
             }
+        }
+    }
+    add_ability(f){
+        this.abilities.push(f)
+    }
+    attack(m){
+        m.master.lastFighter = this.master;
+        m.master.lastFighter = this.master;
+        var rr = 0.5
+        m.life -= this.damage+this.body.speed*rr;
+        console.log("spd:"+this.body.speed)
+        if(m.life<=0){
+            if(m.master.matrix_array.length<=1){//<=1 because it is not removed yet,
+                this.master.give_killReward(m.master)
+                m.master.die()
+            }
+            m.remove();// it removed after it calculate
+        }
+        for(var f of this.abilities){
+            f(m);
         }
     }
     get_candy(body){
@@ -512,7 +516,7 @@ class Player{
                         var xx = lengthdir_x(faceDir,20)+p.x
                         var yy = lengthdir_y(faceDir,20)+p.y
                         var m = p.add_matrix(xx,yy,p.set_life,p.set_damage,1,false);
-                        m.add_force(faceDir,2)
+                        m.add_force(faceDir,1.5)
                     },i*100,this,faceDir)
                 }
             break;
@@ -548,7 +552,7 @@ class Player{
                             newM.add_force(360/interval*i+m.body.angle,2)
                             setTimeout(function(m){
                                 m.remove()
-                            },Math.min(100+master.abilityLevel[0]*20,500),newM)
+                            },Math.min(100+master.abilityLevel[0]*20,300),newM)
                         }
                         
                         m.remove();
@@ -593,10 +597,60 @@ class Player{
                                     m.add_force(faceDir+90*left,0.3)
                                 },50,m,faceDir,left)
                             },50,m,faceDir,left)
-                        },50,m,faceDir, left)
-                    },i*50,this, dir, left)
+                    },50,m,faceDir, left)
+                },i*50,this, dir, left)
+            }
+        break;
+        case 5://icer
+            var p = this;
+            if(p.matrix_array.length>1){
+                var dir = faceDir;
+                p.remove_matrix(0)
+                var xx = p.x+lengthdir_x(dir,20)
+                var yy = p.y+lengthdir_y(dir,20)
+                var m = p.add_matrix(xx,yy,p.set_life,p.set_damage,0,true);
+                m.add_force(dir,1+p.set_life/10);
+                m.body.color = [0,255,255]
+                m.add_ability(function(m){
+                    m.master.add_effect(function(p){
+                        p.set_speed*=0.5
+                    },frameRate*(10+p.set_life))
+                })
+                setTimeout(function(m){
+                    m.remove();
+                },frameRate*(10+p.set_life*5),m)
+                for(var i = 0 ; i < this.set_life-1; i++){
+                    for(var j = -1 ; j < 2 ; j+=2){
+                        setTimeout(function(p,dir){
+                            var xx = p.x+lengthdir_x(dir,20)
+                            var yy = p.y+lengthdir_y(dir,20)
+                            var m = p.add_matrix(xx,yy,1,p.set_damage,0,true);
+                            m.add_force(dir,0.9+p.set_life/10);
+                            m.body.color = [0,255,255]
+                            m.add_ability(function(m){
+                                m.master.add_effect(function(p){
+                                    p.set_speed=0
+                                    p.cooldown[0]--
+                                },frameRate*(20+p.set_life*2))
+                            })
+                            setTimeout(function(m){
+                                m.remove();
+                            },frameRate*(10+p.set_life),m)
+                        },
+                        i*100,this,this.faceDir+j*(i+1)*5)
+                    }
                 }
-            break;
+            }
+            /*
+            setTimeout(function(p,faceDir){
+                p.remove_matrix(0)
+                var xx = lengthdir_x(faceDir, 10)+p.x;
+                var yy = lengthdir_y(faceDir-90*left, 10)+p.y;
+                var m = p.add_matrix(xx,yy,p.set_life,p.set_damage);
+                m.add_force(faceDir-45*left,0.01*distance/p.zoom)
+                
+            },i*50,this, dir)*/
+        break;
         }
         
     }
@@ -1011,14 +1065,21 @@ var roleDataList=[
     {//smasher
         set_cooldown:250
     },
-    {
+    {//hasher
         set_cooldown:150
+    },
+    {//icer
+        set_cooldown:200
     }
 ]
 var evolutionDataList = [
     {
-        requiredLevel:2,
-        selectTypes:[2,3,4]
+        requiredLevel:7,
+        selectTypes:[2,5]
+    },
+    {
+        requiredLevel:4,
+        selectTypes:[3,4]
     },
     {
         requiredLevel:1,
