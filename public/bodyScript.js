@@ -19,7 +19,7 @@ function get_body(uid){
 function update_bodies(){
     for(var b of bodyList){
         var dis = point_distance(b.x,b.y,camera.position.x,camera.position.y);
-        if(dis<value.vision_width){
+        if(dis<value.vision_width/value.zoom*10){
             push();
             translate(b.realX,b.realY)
             strokeWeight(1)

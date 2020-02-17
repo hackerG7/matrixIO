@@ -1,24 +1,25 @@
 //////////////////////////disable right  and zooming
 var scale = 'scale(1)';
 document.body.style.webkitTransform =  scale;    // Chrome, Opera, Safari
- document.body.style.msTransform =   scale;       // IE 9
- document.body.style.transform = scale;     // General
- 
+document.body.style.msTransform =   scale;       // IE 9
+document.body.style.transform = scale;     // General
+Currenthostname = window.location.hostname;
+
 document.addEventListener('contextmenu', event => event.preventDefault());
 var value = {
 	//server_hostname:"http://g7handsome.ddns.net",
-	server_hostname:"http://g7handsome.ddns.net",
-	scene_width:800,
-	scene_height:800,
-	vision_width:2600,
-	vision_height:768*2,
+	server_hostname: Currenthostname,
+	scene_width:500,
+	scene_height:500,
+	vision_width:500,
+	vision_height:500,
 	realZoom:1,
 	zoom:1,
 	abilityTags:["攻擊力","生命值","速度","視野","冷卻"],
 	evolutionDataList:[],
 	evoluted:false,
 	current_evolution:undefined,
-	roles:["射手","坦克","炸彈人","狂牛","赫子"]
+	roles:["射手","坦克","炸彈人","狂牛","赫子","冰封者"]
 }
 var show_ability_levelup = false;
 var show_ability_levelup_alpha = 0;
@@ -57,6 +58,7 @@ frameRate(60)
 	}else{
 		canvas = createCanvas(innerWidth,innerHeight)
 		canvas.position(0,0)
+		//canvas.ondragstart=function(){return false;}
 		inputName = new Input("tester",width/2,height/2-30,400,50,function(){
 			if(!playing){
 				this.position(width/2-this.width/2,height/2-30)
